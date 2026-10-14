@@ -51,7 +51,10 @@ For full experimental details, please refer to the paper.
 
 ## Pretrained Weights
 
-All Pretrained ResNet-50 weights are available in the pretrained folder
+The pretrained weights used in our experiments are
+publicly available.
+
+📦 [Download pretrained weights (Google Drive)](https://drive.google.com/drive/folders/11Ch3C26e-2PlgZ9Vvwq9inMWZwrkZpNA?usp=sharing)
 
 ## Code
 
