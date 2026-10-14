@@ -15,7 +15,7 @@ ShapeBlend is a shape-based data augmentation strategy designed to improve out-o
 It enhances contour information by blending contour maps with the original image, encouraging more shape-aware representations.  
 The method can also be used at inference time through **Shape-Enhanced Voting (SEV)**.
 
-![ShapeBlend pipeline](pipeline.png)
+![ShapeBlend pipeline](Figures/pipeline.png)
 
 ---
 
