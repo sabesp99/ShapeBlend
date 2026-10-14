@@ -21,7 +21,7 @@ The method can also be used at inference time through **Shape-Enhanced Voting (S
 
 ## Summary of Results
 
-Below is a concise summary of the main results reported in the paper where we compa
+Below is a concise summary of the main results reported in the paper.
 
 | Method | Evaluation | IN-C mCA ↑ | IN-C̄ mCA ↑ | IN-R Acc. ↑ | IN-A Acc. ↑ |
 |---|---|---:|---:|---:|---:|
