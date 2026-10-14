@@ -1,4 +1,4 @@
-# ShapeBlend
+# ShapeBlend: Boosting Out-of-Distribution Robustness in Image Classification via Shape-based Blending Augmentation
 
 Official repository for the paper:
 
