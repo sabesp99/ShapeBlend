@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""Estrazione di mappe di contorno Push-Pull CORF su GPU CUDA.
+"""Estrazione di mappe di contorno Push-Pull CORF on GPU CUDA.
 
-Usa la geometria esportata una volta da MATLAB con export_corf_gpu_geometry.
-I calcoli del CORF sono quelli della versione PyTorch gia' confrontata con MATLAB.
-
-Esempio:
+Example:
     python corf_gpu.py --geometry corf_geometry.mat \
         --input-dir /path/clean --output-dir /path/contours \
         --inhibition-factor 4
 
-Le sottocartelle dell'input vengono mantenute nell'output. Le mappe sono PNG
-in scala di grigi, uint8, normalizzate separatamente per ciascuna immagine.
 """
 from __future__ import annotations
 
