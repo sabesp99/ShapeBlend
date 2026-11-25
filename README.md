@@ -56,11 +56,220 @@ publicly available.
 
 📦 [Download pretrained weights (Google Drive)](https://drive.google.com/drive/folders/11Ch3C26e-2PlgZ9Vvwq9inMWZwrkZpNA?usp=sharing)
 
-## Code
+## Training
 
-**Code: TO BE ADDED**
+We provide two training scripts covering the experimental
+configurations presented in the paper:
 
-We are currently organizing the training and evaluation pipeline for public release.
+- `train/train.py`: experiments without PRIME.
+- `train/train_with_prime.py`: experiments involving PRIME.
+
+### Dataset Preparation
+
+Download ImageNet and organize the dataset as follows:
+
+```text
+imagenet1000/
+└── clean/
+    ├── train/
+    │   ├── n01440764/
+    │   └── ...
+    └── val/
+        ├── n01440764/
+        └── ...
+```
+
+Place the `imagenet1000` directory in the repository root,
+alongside the `train` directory.
+
+### ShapeBlend
+
+To reduce computational overhead across the numerous
+experimental configurations, we precomputed the contour
+maps and ShapeBlend variants offline.
+
+During training, the blending factor is randomly sampled
+online from the 18 available variants, while the original
+images are retained in the training dataset.
+
+#### Contour Extraction
+
+We provide a GPU implementation of the Push-Pull CORF operator based on PyTorch.
+
+First, navigate to the preprocessing directory:
+
+```bash
+cd preprocessing
+```
+
+Export the CORF receptive field geometry using MATLAB:
+
+```matlab
+export_corf_gpu_geometry('corf_geometry.mat', 2.2, 4);
+```
+
+This step only needs to be performed once and requires MATLAB with the Image Processing Toolbox.
+
+Extract the contour maps using:
+
+```bash
+python corf_gpu.py \
+    --geometry corf_geometry.mat \
+    --input-dir ../imagenet1000/clean/train \
+    --output-dir ../imagenet1000/contours/train \
+    --inhibition-factor 1.8
+```
+
+Contour maps are saved as grayscale PNG images, preserving the original directory structure.
+
+#### ShapeBlend Generation
+
+Use `blend.py` to generate ShapeBlend images from the original images and their corresponding contour maps.
+
+The `--alpha` argument specifies the absolute blending factor, while `--negative` enables blending with the complement of the contour map.
+
+To generate all 18 ShapeBlend variants used during training, run:
+
+```bash
+for i in {1..9}; do
+    python blend.py \
+        --input-dir ../imagenet1000/clean/train \
+        --contours-dir ../imagenet1000/contours/train \
+        --output-dir ../imagenet1000/blend${i}/train \
+        --alpha 0.${i}
+
+    python blend.py \
+        --input-dir ../imagenet1000/clean/train \
+        --contours-dir ../imagenet1000/contours/train \
+        --output-dir ../imagenet1000/negative${i}/train \
+        --alpha 0.${i} \
+        --negative
+done
+```
+
+The resulting dataset structure is:
+
+```text
+imagenet1000/
+├── clean/
+│   ├── train/
+│   └── val/
+├── contours/train/
+├── blend1/train/
+├── ...
+├── blend9/train/
+├── negative1/train/
+├── ...
+└── negative9/train/
+```
+
+### DeepAugment
+
+Following the original DeepAugment methodology, EDSR
+and CAE augmented images are generated offline.
+
+When combining ShapeBlend with DeepAugment, ShapeBlend
+is applied first. The generated images must follow
+the same directory structure:
+
+```text
+imagenet1000/
+├── clean/
+├── blend1/
+├── ...
+├── negative9/
+├── EDSR/
+│   ├── clean/train/
+│   ├── blend1/train/
+│   ├── ...
+│   └── negative9/train/
+└── CAE/
+    ├── clean/train/
+    ├── blend1/train/
+    ├── ...
+    └── negative9/train/
+```
+
+### Network Architecture
+
+Both training scripts support ResNet-50 and ConvNeXt-Tiny
+by manually selecting the corresponding model definition.
+
+The scripts are currently configured for ConvNeXt-Tiny:
+
+```python
+model = convnext_tiny(weights=None)
+state_dict = torch.load("weights1000/tiny.pth")
+model.load_state_dict(state_dict)
+```
+
+To use ResNet-50, uncomment the ResNet-50 definition
+and comment out the ConvNeXt-Tiny initialization block.
+
+Set the initial learning rate according to the architecture:
+
+- ResNet-50: `0.1`
+- ConvNeXt-Tiny: `0.001`
+
+### Training Commands
+
+Define the common training parameters:
+
+```bash
+COMMON_ARGS="--nclass 1000 --epochs 30 --batch 1024 \
+--lr 0.1 --wd 0.0001 --m 0.9 --num-gpus 4"
+```
+
+The following commands cover all main training
+configurations reported in the paper:
+
+```bash
+# Baseline
+python train.py $COMMON_ARGS --exp baseline --num 1
+
+# ShapeBlend
+python train.py $COMMON_ARGS --exp SB --num 1 --online
+
+# AugMix
+python train.py $COMMON_ARGS --exp AM --num 1 --augmix
+
+# ShapeBlend + AugMix
+python train.py $COMMON_ARGS --exp SB_AM --num 1 --online --augmix
+
+# PRIME
+python train_with_prime.py $COMMON_ARGS --exp PR --num 1 --prime
+
+# ShapeBlend + PRIME
+python train_with_prime.py $COMMON_ARGS --exp SB_PR --num 1 --online --prime
+
+# DeepAugment
+python train.py $COMMON_ARGS --exp DA --num 1 --deepaugment
+
+# ShapeBlend + DeepAugment
+python train.py $COMMON_ARGS --exp SB_DA --num 1 --online --deepaugment
+
+# DeepAugment + AugMix
+python train.py $COMMON_ARGS --exp DA_AM --num 1 --deepaugment --augmix
+
+# ShapeBlend + DeepAugment + AugMix
+python train.py $COMMON_ARGS --exp SB_DA_AM --num 1 --online --deepaugment --augmix
+
+# DeepAugment + PRIME
+python train_with_prime.py $COMMON_ARGS --exp DA_PR --num 1 --deepaugment --prime
+
+# ShapeBlend + DeepAugment + PRIME
+python train_with_prime.py $COMMON_ARGS --exp SB_DA_PR --num 1 --online --deepaugment --prime
+```
+
+Training logs and checkpoints are saved in `train1000/`
+and `weights1000/`, respectively.
+
+---
+
+## Evaluation
+
+**Instructions to be added.**
+
 
 ---
 
